@@ -9,4 +9,11 @@ module.exports = async client => {
         client.commands.set(command.name, command);
         console.log(`La commande ${file} est chargée.`);
     });
+
+    fs.readdirSync("./events").filter(f => f.endsWith(".js")).forEach(file => {
+        let event = require(`./events/${file}`);
+        let eventName = file.split(".")[0];
+        client.on(eventName, event.bind(null, client));
+        console.log(`L'événement ${file} est chargé.`);
+    });
 };
