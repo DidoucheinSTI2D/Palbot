@@ -1,13 +1,15 @@
 const { token } = require('./config.json');
 const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 const loader = require("./loader.js");
+const packageJSON = require("./package.json");
 
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions
+        GatewayIntentBits.GuildMessageReactions,
+        GatewayIntentBits.GuildMembers
     ]
 });
 
@@ -15,8 +17,17 @@ client.commands = new Collection();
 
 loader(client);
 
+const discordJSVersion = packageJSON.dependencies["discord.js"];
+
+console.log(discordJSVersion);
+
 client.once(Events.ClientReady, readyClient => {
     console.log(`Palclient est bien ON en tant que ${readyClient.user.tag}`);
+});
+
+client.on('guildMemberAdd', member => {
+    const welcomeHandler = require('./events/bienvenue.js');
+    welcomeHandler(client, member);
 });
 
 client.on("messageCreate", async (message) => {

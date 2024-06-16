@@ -77,16 +77,21 @@ module.exports = async (client, reaction, user) => {
             ],
         });
 
+        const embedMessage = new EmbedBuilder()
+            .setTitle(`Bonjour ${user.username}`)
+            .setDescription('Veuillez expliquer votre problème. Un membre du staff vous répondra bientôt.\nPour accélérer le processus, veuillez nous envoyer votre ID et des clips si possible.')
+            .setColor('#00FF00');
+
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
                     .setCustomId('close_ticket')
-                    .setLabel('❌')
+                    .setLabel('❌ Fermer le ticket')
                     .setStyle(ButtonStyle.Success)
             );
 
-        const openMessage = await ticket.send({
-            content: `Bonjour ${user.username}, veuillez expliquer votre problème. Un membre du staff vous répondra bientôt.`,
+        await ticket.send({
+            embeds: [embedMessage],
             components: [row]
         });
 
@@ -95,36 +100,45 @@ module.exports = async (client, reaction, user) => {
 
         collector.on('collect', async i => {
             if (i.customId === 'close_ticket') {
-                await i.update({
-                    content: 'Êtes-vous sûr de vouloir fermer votre ticket ? Appuyez de nouveau sur ❌ pour confirmer.',
-                    components: [row]
+                await i.deferUpdate();
+                
+                const confirmationRow = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('confirm_close_ticket')
+                            .setLabel('❌ Confirmer')
+                            .setStyle(ButtonStyle.Success)
+                    );
+
+                await i.followUp({
+                    content: 'Êtes-vous sûr de vouloir fermer votre ticket ? Appuyez sur ❌ Confirmer pour confirmer.',
+                    components: [confirmationRow],
+                    ephemeral: true
                 });
 
-                const confirmationFilter = i => i.customId === 'close_ticket' && i.user.id === user.id;
+                const confirmationFilter = i => i.customId === 'confirm_close_ticket' && i.user.id === user.id;
                 const confirmationCollector = ticket.createMessageComponentCollector({ confirmationFilter, time: 15000 });
 
                 confirmationCollector.on('collect', async i => {
-                    if (i.customId === 'close_ticket') {
-                        await i.update({
-                            content: 'Ticket fermé pour vous.',
-                            components: []
-                        });
-                        ticket.permissionOverwrites.edit(user.id, { VIEW_CHANNEL: false });
+                    if (i.customId === 'confirm_close_ticket') {
+                        await i.deferUpdate();
+
+                        await ticket.permissionOverwrites.edit(user.id, { ViewChannel: false });
 
                         const staffRow = new ActionRowBuilder()
                             .addComponents(
                                 new ButtonBuilder()
                                     .setCustomId('delete_ticket')
-                                    .setLabel('❌')
+                                    .setLabel('❌ Supprimer')
                                     .setStyle(ButtonStyle.Success),
                                 new ButtonBuilder()
                                     .setCustomId('transcript_ticket')
-                                    .setLabel('💾')
-                                    .setStyle(ButtonStyle.Success)
+                                    .setLabel('💾 Transcription')
+                                    .setStyle(ButtonStyle.Primary)
                             );
 
-                        const staffMessage = await ticket.send({
-                            content: `OEE C BON IL A ARRÊTER DE CLC`,
+                        await ticket.send({
+                            content: `Ticket fermé par ${user.username}.`,
                             components: [staffRow]
                         });
 
